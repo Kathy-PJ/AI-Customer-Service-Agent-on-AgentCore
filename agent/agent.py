@@ -294,7 +294,13 @@ class CustomerServiceAgent:
         return hooks_config
 
     def _build_system_prompt(self) -> str:
-        """构建包含上下文的 system prompt"""
+        """Build system prompt — prefer YAML config, fallback to hardcoded."""
+        from .config_loader import load_agent_config, build_system_prompt as build_from_yaml
+        config = load_agent_config()
+        if config is not None:
+            logger.info("Using prompt config from agent.promptforge.yaml")
+            return build_from_yaml(config, parent_id=self.parent_id)
+        # Legacy fallback below...
         # @prompt: session_context
         context_info = f"""
 # 当前会话上下文
