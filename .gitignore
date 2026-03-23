@@ -2,7 +2,9 @@
 .env
 .env.local
 .env.runtime
-.claude/
+# .claude config (exclude settings, keep skills for deployment)
+.claude/settings*.json
+.claude/projects/
 .bedrock_agentcore.yaml
 .DS_Store
 .pytest_cache/
