@@ -298,17 +298,16 @@ class MemoryManager:
                 f"/sessions/{SHARED_EPISODIC_SESSION}/"
             )
 
-            client.create_memory_event(
+            import datetime
+            client.create_event(
                 memoryId=self.memory_id,
                 actorId=SHARED_EPISODIC_ACTOR,
-                eventData={
-                    'conversationalEvent': {
-                        'conversationTurns': [
-                            {'role': 'user', 'content': user_message},
-                            {'role': 'assistant', 'content': assistant_response},
-                        ]
-                    }
-                },
+                sessionId=SHARED_EPISODIC_SESSION,
+                eventTimestamp=datetime.datetime.now(datetime.timezone.utc),
+                payload=[
+                    {'conversational': {'role': 'USER', 'content': {'text': user_message}}},
+                    {'conversational': {'role': 'ASSISTANT', 'content': {'text': assistant_response}}},
+                ],
             )
             logger.debug(f"Saved shared episodic memory to namespace: {namespace}")
 
