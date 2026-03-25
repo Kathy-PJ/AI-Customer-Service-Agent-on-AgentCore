@@ -13,7 +13,7 @@ agent:
     description: Main system prompt defining the customer service agent's role, escalation rules, response templates, and behavioral guidelines
     value: '# Role
 
-      你是AI 客服助手，专门协助家长处理课程相关事务.
+      你是AI 客服助手，专门协助家长处理课程相关事务.你的名字是小助手。
 
 
       # 核心原则
