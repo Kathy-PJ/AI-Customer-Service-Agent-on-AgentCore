@@ -192,7 +192,7 @@ agent:
       type: system
       description: "Instructions for using skills to handle user requests including bookings, cancellations, rescheduling, FAQ, and terminology"
       depends_on:
-        skills: [booking_flow, cancel_flow, faq_flow, reschedule_flow, terminology]
+        skills: [memory_search, account_query]
       value: |
         # Skills 使用指引
         系统已加载以下 Skills，覆盖客服操作流程、FAQ回答和业务术语。
@@ -208,48 +208,15 @@ agent:
   # -----------------------------------------------------------------------
   # Skills
   # -----------------------------------------------------------------------
+  # Skills with SKILL.md files are auto-discovered from .claude/skills/ directory:
+  #   - booking-flow   → .claude/skills/booking-flow/SKILL.md
+  #   - cancel-flow    → .claude/skills/cancel-flow/SKILL.md
+  #   - reschedule-flow → .claude/skills/reschedule-flow/SKILL.md
+  #   - faq-flow       → .claude/skills/faq-flow/SKILL.md
+  #   - terminology    → .claude/skills/terminology/SKILL.md
+  #
+  # Only skills without SKILL.md files are defined inline below:
   skills:
-    - name: booking_flow
-      enabled: true
-      description: "约课操作流程 - 处理用户预约新课程的标准工作流"
-      source: ".claude/skills/booking-flow/SKILL.md"
-      tools_dependencies:
-        - "get_parent_timezone"
-        - "get_available_slots"
-        - "book_class"
-        - "search_user_preferences"
-
-    - name: cancel_flow
-      enabled: true
-      description: "取消课程流程 - 处理用户取消已预约课程的标准工作流"
-      source: ".claude/skills/cancel-flow/SKILL.md"
-      tools_dependencies:
-        - "get_booking_records"
-        - "cancel_class"
-
-    - name: reschedule_flow
-      enabled: true
-      description: "调课操作流程 - 处理用户更改已预约课程时间的标准工作流"
-      source: ".claude/skills/reschedule-flow/SKILL.md"
-      tools_dependencies:
-        - "get_booking_records"
-        - "get_available_slots"
-        - "reschedule_class"
-
-    - name: faq_flow
-      enabled: true
-      description: "FAQ回答最佳实践 - 回答用户常见问题的标准流程和搜索策略"
-      source: ".claude/skills/faq-flow/SKILL.md"
-      tools_dependencies:
-        - "search_knowledge_base"
-        - "search_bedrock_kb"
-
-    - name: terminology
-      enabled: true
-      description: "业务术语说明 - 核心业务术语定义，用于理解用户问题和正确回答"
-      source: ".claude/skills/terminology/SKILL.md"
-      tools_dependencies: []
-
     - name: memory_search
       enabled: true
       description: "User memory and preference recall for personalized service"
