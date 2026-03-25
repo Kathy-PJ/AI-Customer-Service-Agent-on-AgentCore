@@ -190,34 +190,104 @@ agent:
 
     - name: skills_guidance
       type: system
-      description: "Instructions for using knowledge base skills to answer user questions about courses and policies"
+      description: "Instructions for using skills to handle user requests including bookings, cancellations, rescheduling, FAQ, and terminology"
       depends_on:
-        skills: [knowledge_search]
+        skills: [booking_flow, cancel_flow, faq_flow, reschedule_flow, terminology]
       value: |
-        # 知识库 Skills 使用指引
-        系统已加载 XXXX 知识库 Skills，包含课程产品、操作指南、FAQ 等信息。
-        当用户询问相关问题时，系统会自动加载对应的 Skill 来回答。
+        # Skills 使用指引
+        系统已加载以下 Skills，覆盖客服操作流程、FAQ回答和业务术语。
+        当用户提出相关请求时，请按对应 Skill 的标准流程处理。
 
         可用的 Skills 包括:
-        - course-products: 课程产品知识
-        - course-operations: 课程操作指南
-        - payment-refund: 支付与退款
-        - credits-points: 课时与积分规则
-        - user-faq-*: 用户常见问题
-        - 等等
+        - booking-flow: 约课操作流程（预约新课程的标准工作流）
+        - cancel-flow: 取消课程流程（取消已预约课程的标准工作流）
+        - reschedule-flow: 调课操作流程（更改已预约课程时间的标准工作流）
+        - faq-flow: FAQ回答最佳实践（回答常见问题的标准流程，包含搜索策略和回答原则）
+        - terminology: 业务术语说明（课时余额、打卡、积分、调课、请假、预占等核心术语定义）
 
   # -----------------------------------------------------------------------
   # Skills
   # -----------------------------------------------------------------------
   skills:
-    - name: knowledge_search
+    - name: booking_flow
       enabled: true
-      description: "FAQ and knowledge base search for course products, operations, and policies"
+      description: "约课操作流程 - 处理用户预约新课程的标准工作流"
       prompt: |
-        Use the search_faq tool to look up answers from the knowledge base
-        when users ask questions about courses, policies, or procedures.
+        约课标准流程：
+        1. 调用 get_parent_timezone 获取用户时区
+        2. 调用 get_available_slots 查询可用时段（可按日期、老师筛选）
+        3. 向用户展示可选时段并确认约课信息（学生、时间、老师）
+        4. 用户确认后调用 book_class 执行预约
+        5. 反馈预约结果（课程时间、老师、学生、温馨提示）
+        注意：约课需提前12小时，仅处理单次操作，如有"上次的老师"等偏好需先查询 search_user_preferences。
       tools_dependencies:
-        - "search_faq"
+        - "get_parent_timezone"
+        - "get_available_slots"
+        - "book_class"
+        - "search_user_preferences"
+
+    - name: cancel_flow
+      enabled: true
+      description: "取消课程流程 - 处理用户取消已预约课程的标准工作流"
+      prompt: |
+        取消课程标准流程：
+        1. 调用 get_booking_records 查询用户已预约课程
+        2. 展示课程信息（时间、老师、学生、课程类型）并请求用户确认
+        3. 用户确认后调用 cancel_class 执行取消
+        4. 反馈取消结果（已取消课程信息、课时退回情况）
+        注意：取消需提前2小时，仅处理单次操作，必须等用户确认后才执行，小班课取消会消耗请假机会需提醒。
+      tools_dependencies:
+        - "get_booking_records"
+        - "cancel_class"
+
+    - name: reschedule_flow
+      enabled: true
+      description: "调课操作流程 - 处理用户更改已预约课程时间的标准工作流"
+      prompt: |
+        调课标准流程：
+        1. 调用 get_booking_records 查询原课程信息
+        2. 确定新时间（用户指定具体时刻则使用，仅指定日期则继承原课程时间点）
+        3. 调用 get_available_slots 检查新时间可用性（优先原老师）
+        4. 向用户展示调课信息（原课程→新课程）并请求确认
+        5. 用户确认后调用 reschedule_class 执行调课
+        6. 反馈调课结果
+        注意：调课需提前2小时，优先保持原老师，仅处理单次操作，小班课调课会消耗调课机会需提醒。
+      tools_dependencies:
+        - "get_booking_records"
+        - "get_available_slots"
+        - "reschedule_class"
+
+    - name: faq_flow
+      enabled: true
+      description: "FAQ回答最佳实践 - 回答用户常见问题的标准流程和搜索策略"
+      prompt: |
+        FAQ回答标准流程：
+        1. 分析用户问题，识别关键词
+        2. 调用 search_knowledge_base 搜索知识库（主要来源）
+           - 善用关联词和多次搜索：首次未命中时换词重试（如"领课文案"→搜"打卡"）
+           - 用上位概念、同义词、不同表述尝试
+        3. 如 search_knowledge_base 无结果，调用 search_bedrock_kb 补充检索（备用来源）
+        4. 基于结果组织简洁明了的回答
+        5. 确认是否解决用户问题
+        注意：自助可完成的操作（推荐好友、添加学生、试听课、查看报告等）应提供操作指引，不应转人工。
+      tools_dependencies:
+        - "search_knowledge_base"
+        - "search_bedrock_kb"
+
+    - name: terminology
+      enabled: true
+      description: "业务术语说明 - 核心业务术语定义，用于理解用户问题和正确回答"
+      prompt: |
+        业务术语参考：
+        - 课时余额：用户剩余可用课时，不同课程类型分开计算，有有效期
+        - 打卡：转介绍活动，分享海报获得积分奖励（同义词：晒图、分享活动、周打卡）
+        - 积分：通过打卡等活动积累的可兑换奖励点数
+        - 调课：更改已预约课程的上课时间，需提前2小时
+        - 请假：小班课的取消操作，课时不退回，有次数限制
+        - 预占：老师尚未开放的时段，每周约课模式下常见
+        - 约课提前时间：12小时；取消/调课提前时间：2小时
+        - 敏感词汇（需转人工）：退款、退费、投诉、购买、续费、课程价格、打折、抽奖
+      tools_dependencies: []
 
     - name: memory_search
       enabled: true
@@ -229,20 +299,6 @@ agent:
       tools_dependencies:
         - "search_user_preferences"
         - "search_episodic_memories"
-
-    - name: booking_operations
-      enabled: true
-      description: "Create, cancel, and reschedule course bookings"
-      prompt: |
-        Handle single course booking operations:
-        1. Confirm the specific details with the parent first
-        2. Execute using the appropriate booking tool
-        3. Confirm the result to the user
-        For batch operations, guide users to contact their consultant.
-      tools_dependencies:
-        - "book_item"
-        - "cancel_item"
-        - "reschedule_item"
 
     - name: account_query
       enabled: true
